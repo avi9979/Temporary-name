@@ -6,7 +6,7 @@
     "defaultFunnel": "drones",
     "warnAtPercent": 85,
     "staleAfterDays": 7,
-    "counterEndpoint": "/api/counter",
+    "counterEndpoint": "",
     "repo": {
       "owner": "avi9979",
       "name": "Temporary-name",
@@ -38,7 +38,7 @@
         "d2i-1"
       ],
       "fallbackNodeId": "drones-channel",
-      "routingMode": "sequential"
+      "routingMode": "balanced"
     },
     {
       "id": "d2i",
