@@ -55,10 +55,10 @@
       "brandId": "drones",
       "platform": "whatsapp_group",
       "name": "רחפניסטים להייטק #1",
-      "inviteUrl": "",
+      "inviteUrl": "https://chat.whatsapp.com/LjHoU0Y0v6pHTmNW6H6Jxh",
       "capacity": 1024,
-      "members": 0,
-      "calibratedAt": "",
+      "members": 1024,
+      "calibratedAt": "2026-09-04",
       "clicksAtCalibration": 0,
       "acceptingJoins": true,
       "notes": "החליפו את הקישור בקישור ההזמנה האמיתי של הקבוצה."
@@ -68,10 +68,10 @@
       "brandId": "drones",
       "platform": "whatsapp_group",
       "name": "רחפניסטים להייטק #2",
-      "inviteUrl": "",
+      "inviteUrl": "https://chat.whatsapp.com/JRu8USj8xTJ6CdPinR76VD",
       "capacity": 1024,
-      "members": 0,
-      "calibratedAt": "",
+      "members": 498,
+      "calibratedAt": "2026-09-04",
       "clicksAtCalibration": 0,
       "acceptingJoins": true,
       "notes": ""
@@ -81,28 +81,36 @@
       "brandId": "drones",
       "platform": "whatsapp_channel",
       "name": "ערוץ רחפניסטים להייטק",
-      "inviteUrl": "",
+      "inviteUrl": "https://whatsapp.com/channel/0029VbDd8FbE50UYw8DILx0n",
       "capacity": 0,
-      "members": 0,
-      "calibratedAt": "",
+      "members": 3,
+      "calibratedAt": "2026-09-04",
       "clicksAtCalibration": 0,
       "acceptingJoins": true,
       "notes": "ערוץ = בלי הגבלת חברים. משמש כרשת ביטחון כשכל הקבוצות מלאות."
     },
     {
       "id": "d2i-1",
-      "brandId": "d2i",
+      "brandId": "drones",
       "platform": "whatsapp_group",
       "name": "D2I #1",
-      "inviteUrl": "",
+      "inviteUrl": "https://chat.whatsapp.com/KMJqJxsd8WB2GbTLkIVsCN",
       "capacity": 1024,
-      "members": 0,
-      "calibratedAt": "",
+      "members": 3,
+      "calibratedAt": "2026-09-04",
       "clicksAtCalibration": 0,
       "acceptingJoins": true,
       "notes": ""
     }
   ],
   "history": [],
-  "broadcasts": []
+  "broadcasts": [
+    {
+      "id": "bc-mtmzsapg",
+      "title": "לשGDJWQH",
+      "text": "DEUFGEWUO",
+      "createdAt": "2026-09-04",
+      "sentTo": []
+    }
+  ]
 }
