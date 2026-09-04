@@ -480,7 +480,6 @@ function renderManage() {
 
   $("#cfg-warn").value    = d.config.warnAtPercent;
   $("#cfg-stale").value   = d.config.staleAfterDays;
-  $("#cfg-counter").value = d.config.counterEndpoint ?? "";
   $("#cfg-branch").value  = d.config.repo?.branch ?? "main";
 }
 
@@ -612,10 +611,6 @@ async function boot() {
       markDirty(); renderAll();
     });
   }
-  $("#cfg-counter").addEventListener("change", (e) => {
-    state.data.config.counterEndpoint = e.target.value.trim();
-    markDirty();
-  });
   $("#cfg-branch").addEventListener("change", (e) => {
     state.data.config.repo = { ...(state.data.config.repo ?? {}), branch: e.target.value.trim() };
     markDirty();
