@@ -35,6 +35,9 @@ export function normalize(raw) {
     n.clicksAtCalibration = Number(n.clicksAtCalibration) || 0;
     n.acceptingJoins = n.acceptingJoins !== false;
   }
+  for (const f of d.funnels) {
+    f.routingMode ??= "sequential";
+  }
   return d;
 }
 
@@ -68,12 +71,30 @@ export function nodeStatus(node, data, clicks) {
 
 export const isJoinable = (s) => s === "open" || s === "warn";
 
-/* היעד של הקישור הנצחי: הקבוצה הראשונה בתור שיש בה מקום.
+export const ROUTING_MODES = {
+  sequential: { label: "ברצף",             hint: "ממלאים קבוצה אחת עד הסוף, ואז עוברים לבאה בתור." },
+  balanced:   { label: "מאוזן (Load Balancer)", hint: "כל כניסה הולכת לקבוצה עם אחוז התפוסה הנמוך ביותר, כדי שכל הקבוצות יתמלאו בערך ביחד." },
+};
+
+/* אחוז התפוסה של הקבוצה — 0 לקבוצה ללא תקרה. משמש לניתוב מאוזן. */
+function occupancy(node, clicks) {
+  const cap = capacityOf(node);
+  if (cap === Infinity) return 0;
+  return estimatedMembers(node, clicks).value / cap;
+}
+
+/* היעד של הקישור הנצחי, בין הקבוצות הפתוחות בתור של המשפך:
+   ברצף — הראשונה שיש בה מקום. מאוזן — זו עם אחוז התפוסה הנמוך ביותר,
+   כך שכל הקבוצות גדלות יחד באותו קצב במקום אחת אחרי השנייה.
    אם כולן מלאות — רשת הביטחון של המשפך (ערוץ/קהילה), שאין לה תקרה. */
 export function pickTarget(funnel, data, clicks) {
   const ordered = (funnel.order || []).map((id) => byId(data.nodes, id)).filter(Boolean);
-  for (const node of ordered) {
-    if (isJoinable(nodeStatus(node, data, clicks))) return { node, reason: "ordered" };
+  const joinable = ordered.filter((node) => isJoinable(nodeStatus(node, data, clicks)));
+  if (joinable.length) {
+    const node = funnel.routingMode === "balanced"
+      ? joinable.reduce((best, n) => (occupancy(n, clicks) < occupancy(best, clicks) ? n : best))
+      : joinable[0];
+    return { node, reason: "ordered" };
   }
   const fb = funnel.fallbackNodeId ? byId(data.nodes, funnel.fallbackNodeId) : null;
   if (fb && fb.inviteUrl && fb.acceptingJoins) return { node: fb, reason: "fallback" };

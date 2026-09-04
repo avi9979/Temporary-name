@@ -2,7 +2,7 @@
    הכול נטען מ־data/groups.json ונשמר בחזרה לאותו קובץ. */
 
 import {
-  PLATFORMS, loadData, loadClicks, byId, estimatedMembers, capacityOf,
+  PLATFORMS, ROUTING_MODES, loadData, loadClicks, byId, estimatedMembers, capacityOf,
   nodeStatus, pickTarget, daysSince, todayISO, fmt,
 } from "./core.js";
 
@@ -330,12 +330,13 @@ function renderBroadcast() {
   }) : [el("div", { class: "empty" }, "אין יעדים עם קישור. הוסיפו קישורים בלשונית ניהול.")]));
 
   const past = [...state.data.broadcasts].reverse();
-  $("#bc-history-card").hidden = past.length < 2;
+  $("#bc-history-card").hidden = past.length < 1;
   $("#bc-history").replaceChildren(...past.map((b) => el("div", { class: "task" },
     el("i", { class: "dot" }),
     el("div", { class: "why" },
       el("b", {}, b.title || "ללא שם"),
       el("span", {}, `${b.createdAt} · נשלח ל־${(b.sentTo || []).length} מתוך ${state.data.nodes.filter((n) => n.inviteUrl).length}`)),
+    el("button", { class: "sm", onClick: () => copy(b.text, "הנוסח הועתק") }, "העתק נוסח"),
     b.id === (bc?.id)
       ? el("span", { class: "pill ok" }, "פעיל")
       : el("button", { class: "sm", onClick: () => { state.activeBroadcastId = b.id; renderAll(); } }, "הפוך לפעיל"),
@@ -430,6 +431,14 @@ function renderManage() {
     return el("div", { class: "card", style: "box-shadow:none" },
       el("b", {}, f.name),
       el("div", { class: "hint" }, joinUrl(f.id)),
+      el("div", { class: "field", style: "margin-top:10px;max-width:340px" },
+        el("label", {}, "אופן ניתוב"),
+        el("select", {
+          onChange: (e) => { f.routingMode = e.target.value; markDirty(); renderAll(); },
+        }, ...Object.entries(ROUTING_MODES).map(([k, v]) =>
+          el("option", { value: k, selected: k === (f.routingMode || "sequential") }, v.label))),
+        el("div", { class: "hint" }, ROUTING_MODES[f.routingMode]?.hint ?? ROUTING_MODES.sequential.hint),
+      ),
       ...inOrder.map((n, i) => el("div", { class: "task" },
         el("span", { class: "pill" }, `${i + 1}`),
         el("div", { class: "why" }, el("b", {}, n.name),

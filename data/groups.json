@@ -36,7 +36,8 @@
         "drones-1",
         "drones-2"
       ],
-      "fallbackNodeId": "drones-channel"
+      "fallbackNodeId": "drones-channel",
+      "routingMode": "sequential"
     },
     {
       "id": "d2i",
@@ -46,7 +47,8 @@
       "order": [
         "d2i-1"
       ],
-      "fallbackNodeId": ""
+      "fallbackNodeId": "",
+      "routingMode": "sequential"
     }
   ],
   "nodes": [
