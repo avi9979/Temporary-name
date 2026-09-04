@@ -34,6 +34,7 @@
       "tagline": "מחברים אנשים מעולם הרחפנים להייטק.",
       "order": [
         "drones-1",
+        "d2i-1",
         "drones-2"
       ],
       "fallbackNodeId": "drones-channel"
