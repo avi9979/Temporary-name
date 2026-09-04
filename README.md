@@ -36,8 +36,11 @@ https://<הדומיין-שלכם>/join/?c=d2i        ← D2I
 ## הקמה חד־פעמית
 
 ### 1. פרסום האתר
-Settings → Pages → Source: **GitHub Actions**.
-כל דחיפה ל־`main` מעלה את האתר. הכתובת תהיה `https://avi9979.github.io/Temporary-name/`.
+הוורקפלואו מפעיל את GitHub Pages בעצמו בריצה הראשונה — אין מה להגדיר.
+כל דחיפה ל־`main` מעלה את האתר, בכתובת `https://avi9979.github.io/Temporary-name/`.
+
+אם הריצה נכשלת ב־`configure-pages`: Settings → Actions → General →
+Workflow permissions → **Read and write permissions**, ואז הריצו מחדש.
 
 לדומיין משלכם: Settings → Pages → Custom domain, ואז הקישור הנצחי נראה כמו
 `https://join.your-domain.com/?c=drones`.
