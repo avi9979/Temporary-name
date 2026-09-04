@@ -23,9 +23,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-        with:
-          # מפעיל את GitHub Pages לבד בפעם הראשונה, בלי צעד ידני בהגדרות
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .

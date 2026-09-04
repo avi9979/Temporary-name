@@ -35,12 +35,17 @@ https://<הדומיין-שלכם>/join/?c=d2i        ← D2I
 
 ## הקמה חד־פעמית
 
-### 1. פרסום האתר
-הוורקפלואו מפעיל את GitHub Pages בעצמו בריצה הראשונה — אין מה להגדיר.
-כל דחיפה ל־`main` מעלה את האתר, בכתובת `https://avi9979.github.io/Temporary-name/`.
+### 1. פרסום האתר — קליק אחד, פעם אחת
 
-אם הריצה נכשלת ב־`configure-pages`: Settings → Actions → General →
-Workflow permissions → **Read and write permissions**, ואז הריצו מחדש.
+**Settings → Pages → Source: `GitHub Actions`.**
+
+זה הצעד הידני היחיד בהקמה, ואין דרך לעקוף אותו: יצירת אתר Pages דורשת
+הרשאת admin על הריפו, והטוקן של Actions לא מקבל אותה
+(`Resource not accessible by integration`).
+
+אחרי הקליק: Actions → "Deploy to GitHub Pages" → Re-run.
+מכאן והלאה כל דחיפה ל־`main` מעלה את האתר לבד, בכתובת
+`https://avi9979.github.io/Temporary-name/`.
 
 לדומיין משלכם: Settings → Pages → Custom domain, ואז הקישור הנצחי נראה כמו
 `https://join.your-domain.com/?c=drones`.
