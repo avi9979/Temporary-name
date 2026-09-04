@@ -6,7 +6,7 @@
     "defaultFunnel": "drones",
     "warnAtPercent": 85,
     "staleAfterDays": 7,
-    "counterEndpoint": "",
+    "counterEndpoint": "/api/counter",
     "repo": {
       "owner": "avi9979",
       "name": "Temporary-name",
@@ -38,7 +38,7 @@
         "d2i-1"
       ],
       "fallbackNodeId": "drones-channel",
-      "routingMode": "balanced"
+      "routingMode": "sequential"
     },
     {
       "id": "d2i",
@@ -96,7 +96,7 @@
       "id": "d2i-1",
       "brandId": "drones",
       "platform": "whatsapp_group",
-      "name": "D2I #1",
+      "name": "רחפניסטים להייטק #3",
       "inviteUrl": "https://chat.whatsapp.com/KMJqJxsd8WB2GbTLkIVsCN",
       "capacity": 1024,
       "members": 3,
