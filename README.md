@@ -43,7 +43,9 @@ https://<הדומיין-שלכם>/join/?c=d2i        ← D2I
 **נטליפיי (ברירת המחדל של הריפו הזה):** מחברים את הריפו לאתר חדש ב־Netlify
 (Add new site → Import from Git). אין build command ו־publish directory הוא
 `.` — הכול כבר מוגדר ב־`netlify.toml`. נטליפיי גם תבנה לבד את פונקציית
-המונה (`netlify/functions/counter.js`). זהו, אין שום שלב ידני נוסף.
+המונה (`netlify/functions/counter.js`).
+
+יש עוד שלב ידני אחד בשביל שהמונה יעבוד — ר׳ "מספר החברים" למטה.
 
 **לחלופין, GitHub Pages:** אם מעדיפים לא להשתמש בנטליפיי —
 **Settings → Pages → Source: `GitHub Actions`.**
@@ -88,8 +90,25 @@ https://<הדומיין-שלכם>/join/?c=d2i        ← D2I
 מספר משוער מסומן ב־`~`. זו הערכה, לא ספירה מדויקת — לוואטסאפ אין API שמדווח מי
 באמת השלים הצטרפות, רק מי נכנס לקישור.
 
-הוא פועל אוטומטית על נטליפיי (`netlify/functions/counter.js` + Netlify Blobs) —
-אין שום דבר להקים. בלעדיו הכול עובד — פשוט על המספרים הידניים.
+הוא פועל על נטליפיי (`netlify/functions/counter.js` + Netlify Blobs). בלעדיו
+הכול עובד — פשוט על המספרים הידניים.
+
+**שלב חובה כדי שהמונה יעבוד בפועל:** ההגדרה האוטומטית של Netlify Blobs לא
+אמינה בכל הדפלוימנטים — במקרים רבים היא נכשלת עם שגיאה בשם
+`MissingBlobsEnvironmentError`. הפתרון (חד־פעמי, כמה דקות):
+
+1. ב־Netlify → תמונת המשתמש (למעלה מימין) → **User settings → Applications →
+   Personal access tokens → New access token**. תנו לו שם וצרו אותו, והעתיקו
+   את הטוקן (הוא מוצג פעם אחת בלבד).
+2. באתר עצמו: **Site configuration → Environment variables → Add a variable**.
+   שם המשתנה: `BLOBS_TOKEN`, ערך: הטוקן שהעתקתם. Scopes: השאירו ברירת מחדל
+   (Functions כלול).
+3. **Deploys → Trigger deploy → Deploy site** (משתני סביבה נכנסים לתוקף רק
+   בדפלוי חדש).
+
+(את מזהה האתר עצמו, `SITE_ID`, נטליפיי כבר מספקת אוטומטית לפונקציה — רק
+הטוקן צריך להיות מוגדר ידנית.) אחרי זה, `https://<האתר-שלכם>/api/counter?action=all`
+אמור להחזיר `{"counts":{...}}` ולא דף שגיאה.
 
 ---
 

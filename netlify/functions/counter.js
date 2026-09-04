@@ -2,7 +2,6 @@
  * מונה הצטרפויות — Netlify Function + Netlify Blobs.
  * זהו רכיב אופציונלי. בלעדיו הכלי עובד על מספרים ידניים בלבד.
  *
- * Netlify Blobs לא דורש שום הקמה — הוא מוגדר אוטומטית בזמן ריצה על נטליפיי.
  * מספיק לפרסם את הריפו הזה (עם package.json ו־netlify.toml שכבר בריפו),
  * ואז לשים "/api/counter" בשדה "כתובת המונה" בלשונית ניהול.
  *
@@ -14,6 +13,10 @@
  * כל קבוצה נשמרת כמפתח (blob) נפרד — כדי שהצטרפויות לקבוצות שונות לעולם
  * לא יתחרו זו בזו על כתיבה. בתוך אותה קבוצה, כתיבה במקביל מיושבת עם
  * concurrency אופטימי (etag) ונסיונות חוזרים.
+ *
+ * הגדרת Netlify Blobs האוטומטית לא אמינה בכל הדפלוימנטים (MissingBlobsEnvironmentError
+ * מתועד בתקלה נפוצה מצד נטליפיי) — לכן במקום להסתמך עליה, מוסרים כאן ל־siteID+token
+ * מפורשים כשהם מוגדרים כמשתני סביבה. ר׳ README להקמת BLOBS_TOKEN.
  */
 
 const { getStore } = require("@netlify/blobs");
@@ -21,18 +24,34 @@ const { getStore } = require("@netlify/blobs");
 const PREFIX = "node:";
 const MAX_RETRIES = 8;
 
+function counterStore() {
+  const siteID = process.env.SITE_ID;
+  const token = process.env.BLOBS_TOKEN;
+  return siteID && token
+    ? getStore({ name: "community-counter", siteID, token })
+    : getStore("community-counter");
+}
+
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const action = (params.action || "all").toLowerCase();
-  const store = getStore("community-counter");
 
-  if (action === "hit") {
-    const node = String(params.node || "").slice(0, 64);
-    if (node) await bumpCount(store, PREFIX + node);
-    return json({ ok: true });
+  try {
+    const store = counterStore();
+
+    if (action === "hit") {
+      const node = String(params.node || "").slice(0, 64);
+      if (node) await bumpCount(store, PREFIX + node);
+      return json({ ok: true });
+    }
+
+    return json({ counts: await readAll(store) });
+  } catch (err) {
+    /* לא מפילים את הפונקציה עם דף קריסה — מחזירים שגיאה קריאה,
+       כדי ש־loadClicks בצד הלקוח פשוט יתעלם ויעבוד על המספרים הידניים. */
+    console.error(err);
+    return json({ error: String(err && err.message || err) }, 500);
   }
-
-  return json({ counts: await readAll(store) });
 };
 
 async function bumpCount(store, key) {
@@ -62,9 +81,9 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function json(obj) {
+function json(obj, statusCode = 200) {
   return {
-    statusCode: 200,
+    statusCode,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
     body: JSON.stringify(obj),
   };
