@@ -5,7 +5,7 @@
     "siteName": "מרכז הבקרה של הקהילות",
     "defaultFunnel": "drones",
     "warnAtPercent": 85,
-    "staleAfterDays": 14,
+    "staleAfterDays": 7,
     "counterEndpoint": "/api/counter",
     "repo": {
       "owner": "avi9979",
