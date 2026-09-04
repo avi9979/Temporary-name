@@ -28,6 +28,9 @@ export function normalize(raw) {
   d.nodes ??= [];
   d.history ??= [];
   d.broadcasts ??= [];
+  for (const b of d.brands) {
+    b.color ??= "#2563eb";
+  }
   for (const n of d.nodes) {
     n.platform ??= "whatsapp_group";
     n.capacity = Number(n.capacity) || 0;

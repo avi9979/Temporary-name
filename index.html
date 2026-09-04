@@ -18,6 +18,7 @@
     <div>
       <h1 id="site-title">מרכז הבקרה של הקהילות</h1>
       <div class="sub" id="site-sub">טוען…</div>
+      <div style="margin-top:6px"><span id="counter-status" class="pill"></span></div>
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="overview"  aria-selected="true">סקירה</button>
@@ -32,29 +33,7 @@
   <!-- ================= סקירה ================= -->
   <section id="tab-overview" class="tab-panel">
     <div class="stat-row" id="stats"></div>
-
-    <div class="card">
-      <h2>הקישורים הנצחיים</h2>
-      <p class="hint">פרסמו את הכתובות האלה פעם אחת. הן מנתבות תמיד לקבוצה שיש בה מקום — גם בעוד שנה.</p>
-      <div id="permalinks"></div>
-    </div>
-
-    <div class="card">
-      <h2>כל הקבוצות, הקהילות והערוצים</h2>
-      <p class="hint">שני המותגים, כל הפלטפורמות, מסך אחד.</p>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>שם</th><th>מותג</th><th>סוג</th>
-              <th>חברים</th><th>תפוסה</th><th>מקום שנשאר</th>
-              <th>עודכן</th><th>מצב</th>
-            </tr>
-          </thead>
-          <tbody id="nodes-body"></tbody>
-        </table>
-      </div>
-    </div>
+    <div id="brand-overview"></div>
   </section>
 
   <!-- ================= משימות ================= -->
@@ -71,7 +50,7 @@
     <div class="card">
       <h2>לנסח פעם אחת, לשלוח לכולם</h2>
       <p class="hint">
-        הכלי לא שולח בשמכם — הוא מעתיק לכם את הנוסח ופותח את הקבוצה, ואתם מדביקים ושולחים.
+        הכלי לא שולח בשמכם — הוא מעתיק לכם את הנוסח, ואתם עוברים לכל קבוצה (מהלשונית "סקירה") ומדביקים.
         ככה אנחנו נשארים בתוך הכללים של וואטסאפ ולא מסכנים את הקהילות.
       </p>
       <div class="field">
@@ -86,12 +65,6 @@
         <button id="bc-save" class="primary">שמור כקמפיין</button>
         <button id="bc-clear" class="ghost">נקה</button>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>למי כבר שלחתם</h2>
-      <p class="hint">סימון ידני — כדי שלא תשכחו מי נשאר.</p>
-      <div id="bc-targets"></div>
     </div>
 
     <div class="card" id="bc-history-card" hidden>
@@ -127,19 +100,15 @@
     </div>
 
     <div class="card">
-      <h2>קבוצות, קהילות וערוצים</h2>
-      <p class="hint">כאן מעדכנים מספרי חברים (כיול), מחליפים קישורים ופותחים קבוצה חדשה.</p>
-      <div id="manage-nodes"></div>
+      <h2>מותגים</h2>
+      <p class="hint">כל מותג מקבל למטה רובריקה מתקפלת משלו, עם הקבוצות והמשפכים שלו.</p>
+      <div id="manage-brands"></div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-        <button id="add-node" class="primary">הוסף קבוצה / ערוץ</button>
+        <button id="add-brand" class="primary">הוסף מותג</button>
       </div>
     </div>
 
-    <div class="card">
-      <h2>משפכים (סדר הכניסה)</h2>
-      <p class="hint">כל משפך הוא קישור נצחי אחד. הסדר קובע לאן נכנסים קודם.</p>
-      <div id="manage-funnels"></div>
-    </div>
+    <div id="manage-by-brand"></div>
 
     <div class="card">
       <h2>הגדרות</h2>
@@ -157,6 +126,14 @@
           <input id="cfg-branch">
         </div>
       </div>
+      <label style="display:flex;gap:8px;align-items:center;margin:10px 0 0">
+        <input id="cfg-counter-on" type="checkbox" style="width:auto">
+        מונה הצטרפויות אוטומטי דולק
+      </label>
+      <p class="hint" style="margin:6px 0 0">
+        כל הפניה דרך הקישור הנצחי סופרת את עצמה, ומקדמת את מספר החברים המשוער בין כיול לכיול.
+        פועל רק כשהאתר רץ על נטליפיי (ר׳ README).
+      </p>
     </div>
   </section>
 

@@ -63,8 +63,6 @@ const STATUS_TEXT = {
   broken: ["חסר קישור",    "danger"],
 };
 
-const brandName = (id) => byId(state.data.brands, id)?.name ?? "—";
-
 function siteBase() {
   return location.origin + location.pathname.replace(/index\.html$/, "");
 }
@@ -86,6 +84,23 @@ async function copy(text, msg = "הועתק") {
   }
 }
 
+/* קבוצת nodes+funnels לכל מותג, כולל "ללא מותג" למה שלא משויך לאף מותג קיים. */
+function brandGroups() {
+  const d = state.data;
+  const groups = d.brands.map((brand) => ({
+    brand,
+    nodes: d.nodes.filter((n) => n.brandId === brand.id),
+    funnels: d.funnels.filter((f) => f.brandId === brand.id),
+  }));
+  const knownIds = new Set(d.brands.map((b) => b.id));
+  const orphanNodes = d.nodes.filter((n) => !knownIds.has(n.brandId));
+  const orphanFunnels = d.funnels.filter((f) => !knownIds.has(f.brandId));
+  if (orphanNodes.length || orphanFunnels.length) {
+    groups.push({ brand: { id: "", name: "ללא מותג", color: "#94a3b8" }, nodes: orphanNodes, funnels: orphanFunnels });
+  }
+  return groups;
+}
+
 /* ---------------------------------------------------------- סקירה */
 
 function renderStats() {
@@ -100,7 +115,7 @@ function renderStats() {
   const joinedThisMonth = monthlyGrowth();
 
   const stats = [
-    [fmt(totalMembers), "חברים בסך הכול"],
+    [fmt(totalMembers), "חברים בסך הכול, כל המותגים"],
     [fmt(d.nodes.length), "קבוצות, קהילות וערוצים"],
     [fmt(freeSeats), "מקומות פנויים בקבוצות"],
     [openNow ? fmt(openNow) : "0", "פתוחות לכניסה עכשיו"],
@@ -116,7 +131,9 @@ function renderStats() {
 }
 
 /* ההפרש בין הסך הכול היום לסך הכול בתמונת המצב הראשונה של החודש.
-   מחזיר null כשאין מספיק היסטוריה — עדיף "—" על מספר מומצא. */
+   "עכשיו" כבר כולל את ההצטרפויות שהמונה האוטומטי ספר מאז הכיול,
+   כך שהמספר הזה עולה לבד ככל שהמונה סופר עוד הפניות. מחזיר null
+   כשאין מספיק היסטוריה — עדיף "—" על מספר מומצא. */
 function monthlyGrowth() {
   const d = state.data;
   const monthStart = new Date();
@@ -128,55 +145,102 @@ function monthlyGrowth() {
   return Math.max(0, now - snaps[0].total);
 }
 
-function renderPermalinks() {
-  const rows = state.data.funnels.map((f) => {
-    const url = joinUrl(f.id);
-    const { node, reason } = pickTarget(f, state.data, state.clicks);
-    const target = node
-      ? `${reason === "fallback" ? "רשת ביטחון · " : ""}${node.name}`
-      : "אין יעד פנוי — צריך לפתוח קבוצה";
-    return el("div", { class: "task p3" },
-      el("i", { class: "dot" }),
-      el("div", { class: "why" },
-        el("b", {}, f.name),
-        el("span", {}, url),
-        el("span", { style: "display:block" }, `כרגע מנתב אל: ${target}`),
-      ),
-      el("button", { class: "sm", onClick: () => copy(url, "הקישור הועתק") }, "העתק"),
-      el("a", { class: "btn sm", href: url, target: "_blank", rel: "noopener" }, "בדוק"),
-    );
+/* תמונת מצב יומית, נשמרת לבד ברגע הראשון שנפתח מרכז הבקרה באותו יום —
+   בלי שום פעולה ידנית. זה הבסיס היחיד ש"נכנסו החודש" צריך; מכאן,
+   הכול מתעדכן לבד לפי המונה האוטומטי בכל טעינה. */
+function autoSnapshotIfNeeded() {
+  const d = state.data;
+  const today = todayISO();
+  if (d.history.some((h) => h.date === today)) return;
+  const total = d.nodes.reduce((s, n) => s + estimatedMembers(n, state.clicks).value, 0);
+  d.history.push({
+    date: today, total,
+    perNode: Object.fromEntries(d.nodes.map((n) => [n.id, estimatedMembers(n, state.clicks).value])),
   });
-  $("#permalinks").replaceChildren(...(rows.length ? rows : [el("div", { class: "empty" }, "עדיין אין משפכים. הוסיפו אחד בלשונית ניהול.")]));
+  d.history = d.history.slice(-400);
+  markDirty();
 }
 
-function renderNodesTable() {
-  const d = state.data;
-  const rows = d.nodes.map((n) => {
-    const { value, estimated } = estimatedMembers(n, state.clicks);
-    const cap = capacityOf(n);
-    const pct = cap === Infinity ? 0 : Math.min(100, (value / cap) * 100);
-    const [label, cls] = STATUS_TEXT[nodeStatus(n, d, state.clicks)];
-    const days = daysSince(n.calibratedAt);
+function buildPermalinkRow(f) {
+  const url = joinUrl(f.id);
+  const { node, reason } = pickTarget(f, state.data, state.clicks);
+  const target = node
+    ? `${reason === "fallback" ? "רשת ביטחון · " : ""}${node.name}`
+    : "אין יעד פנוי — צריך לפתוח קבוצה";
+  return el("div", { class: "task p3" },
+    el("i", { class: "dot" }),
+    el("div", { class: "why" },
+      el("b", {}, f.name),
+      el("span", {}, url),
+      el("span", { style: "display:block" }, `כרגע מנתב אל: ${target}`),
+    ),
+    el("button", { class: "sm", onClick: () => copy(url, "הקישור הועתק") }, "העתק"),
+    el("a", { class: "btn sm", href: url, target: "_blank", rel: "noopener" }, "בדוק"),
+  );
+}
 
-    return el("tr", {},
-      el("td", {}, n.inviteUrl
-        ? el("a", { href: n.inviteUrl, target: "_blank", rel: "noopener" }, n.name)
-        : n.name),
-      el("td", {}, el("span", { class: "pill brand" }, brandName(n.brandId))),
-      el("td", {}, PLATFORMS[n.platform]?.label ?? n.platform),
-      el("td", { class: "num" }, fmt(value) + (estimated ? " ~" : "")),
-      el("td", {}, cap === Infinity
-        ? el("span", { class: "pill" }, "ללא הגבלה")
-        : el("div", { class: `bar ${pct >= 100 ? "full" : pct >= d.config.warnAtPercent ? "warn" : ""}` },
-            el("i", { style: `width:${pct}%` }))),
-      el("td", { class: "num" }, cap === Infinity ? "∞" : fmt(Math.max(0, cap - value))),
-      el("td", { class: "num" }, days === Infinity ? "אף פעם" : days === 0 ? "היום" : `לפני ${days} ימים`),
-      el("td", {}, el("span", { class: `pill ${cls}` }, label)),
+function buildNodeRow(n) {
+  const d = state.data;
+  const { value, estimated } = estimatedMembers(n, state.clicks);
+  const cap = capacityOf(n);
+  const pct = cap === Infinity ? 0 : Math.min(100, (value / cap) * 100);
+  const [label, cls] = STATUS_TEXT[nodeStatus(n, d, state.clicks)];
+  const days = daysSince(n.calibratedAt);
+
+  return el("tr", {},
+    el("td", {}, n.inviteUrl
+      ? el("a", { href: n.inviteUrl, target: "_blank", rel: "noopener" }, n.name)
+      : n.name),
+    el("td", {}, PLATFORMS[n.platform]?.label ?? n.platform),
+    el("td", { class: "num" }, fmt(value) + (estimated ? " ~" : "")),
+    el("td", {}, cap === Infinity
+      ? el("span", { class: "pill" }, "ללא הגבלה")
+      : el("div", { class: `bar ${pct >= 100 ? "full" : pct >= d.config.warnAtPercent ? "warn" : ""}` },
+          el("i", { style: `width:${pct}%` }))),
+    el("td", { class: "num" }, cap === Infinity ? "∞" : fmt(Math.max(0, cap - value))),
+    el("td", { class: "num" }, days === Infinity ? "אף פעם" : days === 0 ? "היום" : `לפני ${days} ימים`),
+    el("td", {}, el("span", { class: `pill ${cls}` }, label)),
+  );
+}
+
+function renderOverview() {
+  const groups = brandGroups();
+
+  const sections = groups.map(({ brand, nodes, funnels }) => {
+    const total = nodes.reduce((s, n) => s + estimatedMembers(n, state.clicks).value, 0);
+    const permalinkRows = funnels.map(buildPermalinkRow);
+    const nodeRows = nodes.map(buildNodeRow);
+
+    return el("details", { class: "card", open: true },
+      el("summary", {},
+        el("span", { class: "brand-dot", style: `background:${brand.color || "#94a3b8"}` }),
+        el("span", { class: "brand-name" }, brand.name),
+        el("span", { class: "n" }, fmt(total)),
+        el("span", { class: "pill" }, "חברים במותג"),
+      ),
+      el("div", { class: "details-body" },
+        el("h3", {}, "הקישורים הנצחיים"),
+        ...(permalinkRows.length ? permalinkRows : [el("div", { class: "empty" }, "עדיין אין משפכים למותג הזה.")]),
+        el("h3", {}, "קבוצות, קהילות וערוצים"),
+        el("div", { class: "table-scroll" },
+          el("table", {},
+            el("thead", {}, el("tr", {},
+              el("th", {}, "שם"), el("th", {}, "סוג"),
+              el("th", {}, "חברים"), el("th", {}, "תפוסה"), el("th", {}, "מקום שנשאר"),
+              el("th", {}, "עודכן"), el("th", {}, "מצב"),
+            )),
+            el("tbody", {}, ...(nodeRows.length ? nodeRows : [
+              el("tr", {}, el("td", { colSpan: 7 }, el("div", { class: "empty" }, "אין עדיין קבוצות למותג הזה."))),
+            ])),
+          ),
+        ),
+      ),
     );
   });
-  $("#nodes-body").replaceChildren(...(rows.length ? rows : [
-    el("tr", {}, el("td", { colSpan: 8 }, el("div", { class: "empty" }, "אין עדיין קבוצות."))),
-  ]));
+
+  $("#brand-overview").replaceChildren(...(sections.length
+    ? sections
+    : [el("div", { class: "card" }, el("div", { class: "empty" }, "אין עדיין מותגים. הוסיפו אחד בלשונית ניהול."))]));
 }
 
 /* ---------------------------------------------------------- משימות */
@@ -249,26 +313,6 @@ function buildTasks() {
     }
   }
 
-  const bc = activeBroadcast();
-  if (bc) {
-    const pending = d.nodes.filter((n) => n.inviteUrl && !(bc.sentTo || []).includes(n.id));
-    if (pending.length) {
-      tasks.push({
-        p: 3, title: `"${bc.title}" עוד לא נשלחה ל־${pending.length} מקומות`,
-        why: pending.map((n) => n.name).join(" · "),
-        action: ["המשך שליחה", goto("broadcast")],
-      });
-    }
-  }
-
-  if (!d.history.some((h) => h.date === todayISO())) {
-    tasks.push({
-      p: 4, title: "שמור תמונת מצב של היום",
-      why: "תמונת מצב יומית היא מה שמאפשר להגיד 'כמה אנשים נכנסו החודש' במספר, לא בהרגשה.",
-      action: ["שמור תמונת מצב", () => { snapshot(); renderAll(); }],
-    });
-  }
-
   return tasks.sort((a, b) => a.p - b.p);
 }
 
@@ -280,18 +324,6 @@ function renderTasks() {
     el("div", { class: "why" }, el("b", {}, t.title), el("span", {}, t.why)),
     t.action ? el("button", { class: "sm primary", onClick: t.action[1] }, t.action[0]) : null,
   )) : [el("div", { class: "empty" }, "אין מה לעשות. הכול פתוח, מכויל ומעודכן.")]));
-}
-
-function snapshot() {
-  const total = state.data.nodes.reduce((s, n) => s + estimatedMembers(n, state.clicks).value, 0);
-  const today = todayISO();
-  const existing = state.data.history.find((h) => h.date === today);
-  if (existing) existing.total = total;
-  else state.data.history.push({ date: today, total, perNode: Object.fromEntries(
-    state.data.nodes.map((n) => [n.id, estimatedMembers(n, state.clicks).value]))});
-  state.data.history = state.data.history.slice(-400);
-  markDirty();
-  toast("תמונת המצב נשמרה");
 }
 
 /* ---------------------------------------------------------- הודעה לכולם */
@@ -306,40 +338,24 @@ function renderBroadcast() {
     $("#bc-text").value = bc.text;
   }
 
-  const targets = state.data.nodes.filter((n) => n.inviteUrl);
-  $("#bc-targets").replaceChildren(...(targets.length ? targets.map((n) => {
-    const sent = bc ? (bc.sentTo || []).includes(n.id) : false;
-    return el("div", { class: `task ${sent ? "" : "p3"}` },
-      el("input", {
-        type: "checkbox", checked: sent, disabled: !bc,
-        style: "width:auto;flex:none",
-        onChange: (e) => {
-          bc.sentTo ??= [];
-          bc.sentTo = e.target.checked
-            ? [...new Set([...bc.sentTo, n.id])]
-            : bc.sentTo.filter((x) => x !== n.id);
-          markDirty(); renderAll();
-        },
-      }),
-      el("div", { class: "why" },
-        el("b", {}, n.name),
-        el("span", {}, `${brandName(n.brandId)} · ${PLATFORMS[n.platform]?.label ?? n.platform}`)),
-      el("button", { class: "sm", disabled: !bc, onClick: () => copy($("#bc-text").value, "הנוסח הועתק") }, "העתק נוסח"),
-      el("a", { class: "btn sm", href: n.inviteUrl, target: "_blank", rel: "noopener" }, "פתח בוואטסאפ"),
-    );
-  }) : [el("div", { class: "empty" }, "אין יעדים עם קישור. הוסיפו קישורים בלשונית ניהול.")]));
-
   const past = [...state.data.broadcasts].reverse();
   $("#bc-history-card").hidden = past.length < 1;
   $("#bc-history").replaceChildren(...past.map((b) => el("div", { class: "task" },
     el("i", { class: "dot" }),
-    el("div", { class: "why" },
-      el("b", {}, b.title || "ללא שם"),
-      el("span", {}, `${b.createdAt} · נשלח ל־${(b.sentTo || []).length} מתוך ${state.data.nodes.filter((n) => n.inviteUrl).length}`)),
+    el("div", { class: "why" }, el("b", {}, b.title || "ללא שם"), el("span", {}, b.createdAt)),
     el("button", { class: "sm", onClick: () => copy(b.text, "הנוסח הועתק") }, "העתק נוסח"),
     b.id === (bc?.id)
       ? el("span", { class: "pill ok" }, "פעיל")
       : el("button", { class: "sm", onClick: () => { state.activeBroadcastId = b.id; renderAll(); } }, "הפוך לפעיל"),
+    el("button", {
+      class: "sm ghost",
+      onClick: () => {
+        if (!confirm(`למחוק את הקמפיין "${b.title || "ללא שם"}"?`)) return;
+        state.data.broadcasts = state.data.broadcasts.filter((x) => x.id !== b.id);
+        if (state.activeBroadcastId === b.id) state.activeBroadcastId = null;
+        markDirty(); renderAll();
+      },
+    }, "מחק"),
   )));
 }
 
@@ -354,7 +370,7 @@ function saveBroadcast() {
     toast("הקמפיין עודכן");
   } else {
     const id = `bc-${Date.now().toString(36)}`;
-    state.data.broadcasts.push({ id, title: title || "ללא שם", text, createdAt: todayISO(), sentTo: [] });
+    state.data.broadcasts.push({ id, title: title || "ללא שם", text, createdAt: todayISO() });
     state.activeBroadcastId = id;
     toast("קמפיין חדש נוצר");
   }
@@ -362,130 +378,219 @@ function saveBroadcast() {
   renderAll();
 }
 
-/* ---------------------------------------------------------- ניהול */
+/* ---------------------------------------------------------- ניהול: מותגים */
 
-function renderManage() {
+function renderManageBrands() {
   const d = state.data;
-
-  $("#manage-nodes").replaceChildren(...d.nodes.map((n) => {
-    const capped = PLATFORMS[n.platform]?.capped;
-    const field = (label, input) => el("div", { class: "field" }, el("label", {}, label), input);
-    const bind = (key, opts = {}) => el("input", {
-      value: n[key] ?? "", ...opts,
-      onChange: (e) => {
-        n[key] = opts.type === "number" ? Number(e.target.value) || 0 : e.target.value;
+  $("#manage-brands").replaceChildren(...(d.brands.length ? d.brands.map((b) => el("div", { class: "task" },
+    el("input", {
+      type: "color", value: /^#[0-9a-f]{6}$/i.test(b.color || "") ? b.color : "#2563eb",
+      style: "width:40px;flex:none;padding:2px;height:34px",
+      onChange: (e) => { b.color = e.target.value; markDirty(); renderAll(); },
+    }),
+    el("div", { class: "why", style: "flex:1 1 200px" },
+      el("input", {
+        value: b.name, placeholder: "שם המותג",
+        onChange: (e) => { b.name = e.target.value.trim() || b.name; markDirty(); renderAll(); },
+      })),
+    el("button", {
+      class: "sm ghost",
+      onClick: () => {
+        if (!confirm(`למחוק את המותג "${b.name}"? הקבוצות והמשפכים שלו לא יימחקו — הם יעברו ל"ללא מותג".`)) return;
+        d.brands = d.brands.filter((x) => x.id !== b.id);
         markDirty(); renderAll();
       },
-    });
-
-    return el("div", { class: "card", style: "box-shadow:none" },
-      el("div", { class: "grid-2" },
-        field("שם", bind("name")),
-        field("מותג", el("select", {
-          onChange: (e) => { n.brandId = e.target.value; markDirty(); renderAll(); },
-        }, ...d.brands.map((b) => el("option", { value: b.id, selected: b.id === n.brandId }, b.name)))),
-        field("סוג", el("select", {
-          onChange: (e) => { n.platform = e.target.value; markDirty(); renderAll(); },
-        }, ...Object.entries(PLATFORMS).map(([k, v]) =>
-          el("option", { value: k, selected: k === n.platform }, v.label)))),
-        field("קישור הזמנה", bind("inviteUrl", { placeholder: "https://chat.whatsapp.com/…" })),
-        capped ? field("תפוסה מרבית", bind("capacity", { type: "number", min: 1 })) : null,
-        field("מספר חברים (כיול ידני)", el("input", {
-          type: "number", min: 0, value: n.members,
-          onChange: (e) => {
-            n.members = Number(e.target.value) || 0;
-            n.calibratedAt = todayISO();
-            n.clicksAtCalibration = state.clicks?.[n.id] ?? n.clicksAtCalibration;
-            markDirty(); renderAll();
-          },
-        })),
-      ),
-      el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px" },
-        el("label", { style: "display:flex;gap:6px;align-items:center;margin:0" },
-          el("input", {
-            type: "checkbox", checked: n.acceptingJoins, style: "width:auto",
-            onChange: (e) => { n.acceptingJoins = e.target.checked; markDirty(); renderAll(); },
-          }), "פתוחה לכניסה"),
-        el("span", { class: "pill" }, n.calibratedAt ? `כויל ב־${n.calibratedAt}` : "לא כויל"),
-        el("span", { style: "flex:1" }),
-        el("button", {
-          class: "sm ghost",
-          onClick: () => {
-            if (!confirm(`למחוק את "${n.name}"? הפעולה גם תסיר אותה מכל המשפכים.`)) return;
-            d.nodes = d.nodes.filter((x) => x.id !== n.id);
-            for (const f of d.funnels) {
-              f.order = (f.order || []).filter((x) => x !== n.id);
-              if (f.fallbackNodeId === n.id) f.fallbackNodeId = "";
-            }
-            markDirty(); renderAll();
-          },
-        }, "מחק"),
-      ),
-    );
-  }));
-
-  $("#manage-funnels").replaceChildren(...d.funnels.map((f) => {
-    const inOrder = (f.order || []).map((id) => byId(d.nodes, id)).filter(Boolean);
-    const available = d.nodes.filter((n) => !(f.order || []).includes(n.id));
-
-    return el("div", { class: "card", style: "box-shadow:none" },
-      el("b", {}, f.name),
-      el("div", { class: "hint" }, joinUrl(f.id)),
-      el("div", { class: "field", style: "margin-top:10px;max-width:340px" },
-        el("label", {}, "אופן ניתוב"),
-        el("select", {
-          onChange: (e) => { f.routingMode = e.target.value; markDirty(); renderAll(); },
-        }, ...Object.entries(ROUTING_MODES).map(([k, v]) =>
-          el("option", { value: k, selected: k === (f.routingMode || "sequential") }, v.label))),
-        el("div", { class: "hint" }, ROUTING_MODES[f.routingMode]?.hint ?? ROUTING_MODES.sequential.hint),
-      ),
-      ...inOrder.map((n, i) => el("div", { class: "task" },
-        el("span", { class: "pill" }, `${i + 1}`),
-        el("div", { class: "why" }, el("b", {}, n.name),
-          el("span", {}, STATUS_TEXT[nodeStatus(n, d, state.clicks)][0])),
-        el("button", {
-          class: "sm", disabled: i === 0,
-          onClick: () => { const o = f.order; [o[i - 1], o[i]] = [o[i], o[i - 1]]; markDirty(); renderAll(); },
-        }, "↑"),
-        el("button", {
-          class: "sm", disabled: i === inOrder.length - 1,
-          onClick: () => { const o = f.order; [o[i + 1], o[i]] = [o[i], o[i + 1]]; markDirty(); renderAll(); },
-        }, "↓"),
-        el("button", {
-          class: "sm ghost",
-          onClick: () => { f.order = f.order.filter((x) => x !== n.id); markDirty(); renderAll(); },
-        }, "הסר"),
-      )),
-      el("div", { class: "grid-2", style: "margin-top:10px" },
-        el("div", { class: "field" },
-          el("label", {}, "הוסף לתור"),
-          el("select", {
-            onChange: (e) => {
-              if (!e.target.value) return;
-              f.order = [...(f.order || []), e.target.value];
-              markDirty(); renderAll();
-            },
-          }, el("option", { value: "" }, "— בחרו —"),
-             ...available.map((n) => el("option", { value: n.id }, n.name)))),
-        el("div", { class: "field" },
-          el("label", {}, "רשת ביטחון (כשכולן מלאות)"),
-          el("select", {
-            onChange: (e) => { f.fallbackNodeId = e.target.value; markDirty(); renderAll(); },
-          }, el("option", { value: "" }, "— אין —"),
-             ...d.nodes.filter((n) => !PLATFORMS[n.platform]?.capped)
-               .map((n) => el("option", { value: n.id, selected: n.id === f.fallbackNodeId }, n.name)))),
-      ),
-    );
-  }));
-
-  $("#cfg-warn").value    = d.config.warnAtPercent;
-  $("#cfg-stale").value   = d.config.staleAfterDays;
-  $("#cfg-branch").value  = d.config.repo?.branch ?? "main";
+    }, "מחק"),
+  )) : [el("div", { class: "empty" }, "אין עדיין מותגים.")]));
 }
 
-function addNode() {
+function addBrand() {
   const d = state.data;
-  const brandId = d.brands[0]?.id ?? "";
+  const id = `brand-${Date.now().toString(36)}`;
+  d.brands.push({ id, name: `מותג חדש ${d.brands.length + 1}`, color: "#2563eb" });
+  markDirty(); renderAll();
+  toast("נוסף מותג. תנו לו שם, ואז אפשר להוסיף לו קבוצות ומשפך בלשונית הזאת.");
+}
+
+/* ---------------------------------------------------------- ניהול: קבוצות ומשפכים לפי מותג */
+
+function buildNodeEditor(n) {
+  const d = state.data;
+  const capped = PLATFORMS[n.platform]?.capped;
+  const field = (label, input) => el("div", { class: "field" }, el("label", {}, label), input);
+  const bind = (key, opts = {}) => el("input", {
+    value: n[key] ?? "", ...opts,
+    onChange: (e) => {
+      n[key] = opts.type === "number" ? Number(e.target.value) || 0 : e.target.value;
+      markDirty(); renderAll();
+    },
+  });
+
+  return el("div", { class: "card", style: "box-shadow:none" },
+    el("div", { class: "grid-2" },
+      field("שם", bind("name")),
+      field("מותג", el("select", {
+        onChange: (e) => { n.brandId = e.target.value; markDirty(); renderAll(); },
+      }, ...d.brands.map((b) => el("option", { value: b.id, selected: b.id === n.brandId }, b.name)))),
+      field("סוג", el("select", {
+        onChange: (e) => { n.platform = e.target.value; markDirty(); renderAll(); },
+      }, ...Object.entries(PLATFORMS).map(([k, v]) =>
+        el("option", { value: k, selected: k === n.platform }, v.label)))),
+      field("קישור הזמנה", bind("inviteUrl", { placeholder: "https://chat.whatsapp.com/…" })),
+      capped ? field("תפוסה מרבית", bind("capacity", { type: "number", min: 1 })) : null,
+      field("מספר חברים (כיול ידני)", el("input", {
+        type: "number", min: 0, value: n.members,
+        onChange: (e) => {
+          n.members = Number(e.target.value) || 0;
+          n.calibratedAt = todayISO();
+          n.clicksAtCalibration = state.clicks?.[n.id] ?? n.clicksAtCalibration;
+          markDirty(); renderAll();
+        },
+      })),
+    ),
+    el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px" },
+      el("label", { style: "display:flex;gap:6px;align-items:center;margin:0" },
+        el("input", {
+          type: "checkbox", checked: n.acceptingJoins, style: "width:auto",
+          onChange: (e) => { n.acceptingJoins = e.target.checked; markDirty(); renderAll(); },
+        }), "פתוחה לכניסה"),
+      el("span", { class: "pill" }, n.calibratedAt ? `כויל ב־${n.calibratedAt}` : "לא כויל"),
+      el("span", { style: "flex:1" }),
+      el("button", {
+        class: "sm ghost",
+        onClick: () => {
+          if (!confirm(`למחוק את "${n.name}"? הפעולה גם תסיר אותה מכל המשפכים.`)) return;
+          d.nodes = d.nodes.filter((x) => x.id !== n.id);
+          for (const f of d.funnels) {
+            f.order = (f.order || []).filter((x) => x !== n.id);
+            if (f.fallbackNodeId === n.id) f.fallbackNodeId = "";
+          }
+          markDirty(); renderAll();
+        },
+      }, "מחק"),
+    ),
+  );
+}
+
+function buildFunnelEditor(f) {
+  const d = state.data;
+  const inOrder = (f.order || []).map((id) => byId(d.nodes, id)).filter(Boolean);
+  const available = d.nodes.filter((n) => n.brandId === f.brandId && !(f.order || []).includes(n.id));
+  const fallbackOptions = d.nodes.filter((n) => n.brandId === f.brandId && !PLATFORMS[n.platform]?.capped);
+
+  return el("div", { class: "card", style: "box-shadow:none" },
+    el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center" },
+      el("b", { style: "flex:1" }, f.name),
+      el("button", {
+        class: "sm ghost",
+        onClick: () => {
+          if (!confirm(`למחוק את המשפך "${f.name}"? הקישור הנצחי שלו יפסיק לעבוד.`)) return;
+          d.funnels = d.funnels.filter((x) => x.id !== f.id);
+          markDirty(); renderAll();
+        },
+      }, "מחק משפך"),
+    ),
+    el("div", { class: "hint" }, joinUrl(f.id)),
+    el("div", { class: "field", style: "margin-top:10px;max-width:340px" },
+      el("label", {}, "אופן ניתוב"),
+      el("select", {
+        onChange: (e) => { f.routingMode = e.target.value; markDirty(); renderAll(); },
+      }, ...Object.entries(ROUTING_MODES).map(([k, v]) =>
+        el("option", { value: k, selected: k === (f.routingMode || "sequential") }, v.label))),
+      el("div", { class: "hint" }, ROUTING_MODES[f.routingMode]?.hint ?? ROUTING_MODES.sequential.hint),
+    ),
+    ...inOrder.map((n, i) => el("div", { class: "task" },
+      el("span", { class: "pill" }, `${i + 1}`),
+      el("div", { class: "why" }, el("b", {}, n.name),
+        el("span", {}, STATUS_TEXT[nodeStatus(n, d, state.clicks)][0])),
+      el("button", {
+        class: "sm", disabled: i === 0,
+        onClick: () => { const o = f.order; [o[i - 1], o[i]] = [o[i], o[i - 1]]; markDirty(); renderAll(); },
+      }, "↑"),
+      el("button", {
+        class: "sm", disabled: i === inOrder.length - 1,
+        onClick: () => { const o = f.order; [o[i + 1], o[i]] = [o[i], o[i + 1]]; markDirty(); renderAll(); },
+      }, "↓"),
+      el("button", {
+        class: "sm ghost",
+        onClick: () => { f.order = f.order.filter((x) => x !== n.id); markDirty(); renderAll(); },
+      }, "הסר"),
+    )),
+    el("div", { class: "grid-2", style: "margin-top:10px" },
+      el("div", { class: "field" },
+        el("label", {}, "הוסף לתור"),
+        el("select", {
+          onChange: (e) => {
+            if (!e.target.value) return;
+            f.order = [...(f.order || []), e.target.value];
+            markDirty(); renderAll();
+          },
+        }, el("option", { value: "" }, "— בחרו —"),
+           ...available.map((n) => el("option", { value: n.id }, n.name)))),
+      el("div", { class: "field" },
+        el("label", {}, "רשת ביטחון (כשכולן מלאות)"),
+        el("select", {
+          onChange: (e) => { f.fallbackNodeId = e.target.value; markDirty(); renderAll(); },
+        }, el("option", { value: "" }, "— אין —"),
+           ...fallbackOptions.map((n) => el("option", { value: n.id, selected: n.id === f.fallbackNodeId }, n.name)))),
+    ),
+  );
+}
+
+function renderManageByBrand() {
+  const groups = brandGroups();
+
+  const sections = groups.map(({ brand, nodes, funnels }) => el("details", { class: "card", open: true },
+    el("summary", {},
+      el("span", { class: "brand-dot", style: `background:${brand.color || "#94a3b8"}` }),
+      el("span", { class: "brand-name" }, brand.name),
+      el("span", { class: "pill" }, `${nodes.length} קבוצות`),
+      el("span", { class: "pill" }, `${funnels.length} משפכים`),
+    ),
+    el("div", { class: "details-body" },
+      el("h3", {}, "קבוצות, קהילות וערוצים"),
+      ...nodes.map(buildNodeEditor),
+      brand.id ? el("div", { style: "margin:4px 0 4px" },
+        el("button", { class: "sm primary", onClick: () => addNode(brand.id) }, "הוסף קבוצה / ערוץ"),
+      ) : null,
+      el("h3", {}, "משפכים (סדר הכניסה)"),
+      ...funnels.map(buildFunnelEditor),
+      brand.id ? el("div", { style: "margin-top:4px" },
+        el("button", { class: "sm primary", onClick: () => addFunnel(brand.id) }, "הוסף משפך"),
+      ) : null,
+    ),
+  ));
+
+  $("#manage-by-brand").replaceChildren(...(sections.length
+    ? sections
+    : [el("div", { class: "card" }, el("div", { class: "empty" }, "הוסיפו מותג למעלה כדי להתחיל."))]));
+}
+
+function renderSettings() {
+  const d = state.data;
+  $("#cfg-warn").value   = d.config.warnAtPercent;
+  $("#cfg-stale").value  = d.config.staleAfterDays;
+  $("#cfg-branch").value = d.config.repo?.branch ?? "main";
+  $("#cfg-counter-on").checked = !!d.config.counterEndpoint;
+}
+
+function renderCounterStatus() {
+  const pill = $("#counter-status");
+  const on = !!state.data.config.counterEndpoint;
+  if (!on) {
+    pill.textContent = "המונה כבוי";
+    pill.className = "pill";
+  } else if (state.clicks) {
+    pill.textContent = "המונה דולק";
+    pill.className = "pill ok";
+  } else {
+    pill.textContent = "המונה מוגדר אך לא מגיב";
+    pill.className = "pill warn";
+  }
+}
+
+function addNode(brandId) {
+  const d = state.data;
   const n = {
     id: `node-${Date.now().toString(36)}`,
     brandId, platform: "whatsapp_group",
@@ -497,6 +602,18 @@ function addNode() {
   d.nodes.push(n);
   markDirty(); renderAll();
   toast("נוספה. עכשיו הדביקו את קישור ההזמנה ושייכו אותה למשפך.");
+}
+
+function addFunnel(brandId) {
+  const d = state.data;
+  const brand = byId(d.brands, brandId);
+  const id = `funnel-${Date.now().toString(36)}`;
+  d.funnels.push({
+    id, brandId, name: `משפך חדש${brand ? " · " + brand.name : ""}`,
+    tagline: "", order: [], fallbackNodeId: "", routingMode: "sequential",
+  });
+  markDirty(); renderAll();
+  toast("נוסף משפך. הקישור הנצחי שלו כבר פעיל — סדרו את התור והוסיפו רשת ביטחון.");
 }
 
 /* ---------------------------------------------------------- שמירה לגיטהאב */
@@ -570,11 +687,13 @@ function selectTab(name) {
 
 function renderAll() {
   renderStats();
-  renderPermalinks();
-  renderNodesTable();
+  renderCounterStatus();
+  renderOverview();
   renderTasks();
   renderBroadcast();
-  renderManage();
+  renderManageBrands();
+  renderManageByBrand();
+  renderSettings();
 }
 
 async function boot() {
@@ -590,12 +709,11 @@ async function boot() {
 
   $("#site-title").textContent = state.data.config.siteName ?? "מרכז הבקרה של הקהילות";
   $("#site-sub").textContent =
-    `${state.data.brands.map((b) => b.name).join(" · ")} · עודכן ${state.data.updatedAt ?? "—"}` +
-    (state.clicks ? "" : " · המונה כבוי, המספרים ידניים");
+    `${state.data.brands.map((b) => b.name).join(" · ")} · עודכן ${state.data.updatedAt ?? "—"}`;
   $("#gh-token").value = localStorage.getItem(TOKEN_KEY) ?? "";
 
   $$("[role=tab]").forEach((b) => b.addEventListener("click", () => selectTab(b.dataset.tab)));
-  $("#add-node").addEventListener("click", addNode);
+  $("#add-brand").addEventListener("click", addBrand);
   $("#bc-save").addEventListener("click", saveBroadcast);
   $("#bc-clear").addEventListener("click", () => { $("#bc-title").value = ""; $("#bc-text").value = ""; });
   $("#save-github").addEventListener("click", saveToGithub);
@@ -615,10 +733,15 @@ async function boot() {
     state.data.config.repo = { ...(state.data.config.repo ?? {}), branch: e.target.value.trim() };
     markDirty();
   });
+  $("#cfg-counter-on").addEventListener("change", (e) => {
+    state.data.config.counterEndpoint = e.target.checked ? "/api/counter" : "";
+    markDirty(); renderAll();
+  });
 
   addEventListener("beforeunload", (e) => { if (state.dirty) e.preventDefault(); });
 
   markClean();
+  autoSnapshotIfNeeded();
   renderAll();
   const tab = location.hash.slice(1);
   if (["overview", "tasks", "broadcast", "manage"].includes(tab)) selectTab(tab);
