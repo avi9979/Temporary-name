@@ -73,10 +73,10 @@
       "name": "רחפניסטים להייטק #2",
       "inviteUrl": "https://chat.whatsapp.com/JRu8USj8xTJ6CdPinR76VD",
       "capacity": 1024,
-      "members": 498,
+      "members": 1024,
       "calibratedAt": "2026-09-04",
       "clicksAtCalibration": 0,
-      "acceptingJoins": true,
+      "acceptingJoins": false,
       "notes": ""
     },
     {
