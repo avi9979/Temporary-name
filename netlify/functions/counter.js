@@ -48,9 +48,17 @@ exports.handler = async (event) => {
     return json({ counts: await readAll(store) });
   } catch (err) {
     /* לא מפילים את הפונקציה עם דף קריסה — מחזירים שגיאה קריאה,
-       כדי ש־loadClicks בצד הלקוח פשוט יתעלם ויעבוד על המספרים הידניים. */
+       כדי ש־loadClicks בצד הלקוח פשוט יתעלם ויעבוד על המספרים הידניים.
+       מצרפים גם אבחון (בלי לחשוף את הטוקן עצמו) כדי לדעת בלי ניחושים
+       אם BLOBS_TOKEN/SITE_ID בכלל מגיעים לפונקציה בזמן ריצה. */
     console.error(err);
-    return json({ error: String(err && err.message || err) }, 500);
+    return json({
+      error: String(err && err.message || err),
+      diagnostics: {
+        hasSiteId: !!process.env.SITE_ID,
+        hasBlobsToken: !!process.env.BLOBS_TOKEN,
+      },
+    }, 500);
   }
 };
 
