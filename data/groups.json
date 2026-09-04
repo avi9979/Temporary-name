@@ -33,9 +33,9 @@
       "name": "קבוצות רחפניסטים להייטק",
       "tagline": "מחברים אנשים מעולם הרחפנים להייטק.",
       "order": [
+        "drones-2",
         "drones-1",
-        "d2i-1",
-        "drones-2"
+        "d2i-1"
       ],
       "fallbackNodeId": "drones-channel"
     },
