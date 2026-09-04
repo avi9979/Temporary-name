@@ -6,7 +6,7 @@
     "defaultFunnel": "drones",
     "warnAtPercent": 85,
     "staleAfterDays": 14,
-    "counterEndpoint": "",
+    "counterEndpoint": "/api/counter",
     "repo": {
       "owner": "avi9979",
       "name": "Temporary-name",

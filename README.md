@@ -38,8 +38,14 @@ https://<הדומיין-שלכם>/join/?c=d2i        ← D2I
 
 ## הקמה חד־פעמית
 
-### 1. פרסום האתר — קליק אחד, פעם אחת
+### 1. פרסום האתר
 
+**נטליפיי (ברירת המחדל של הריפו הזה):** מחברים את הריפו לאתר חדש ב־Netlify
+(Add new site → Import from Git). אין build command ו־publish directory הוא
+`.` — הכול כבר מוגדר ב־`netlify.toml`. נטליפיי גם תבנה לבד את פונקציית
+המונה (`netlify/functions/counter.js`). זהו, אין שום שלב ידני נוסף.
+
+**לחלופין, GitHub Pages:** אם מעדיפים לא להשתמש בנטליפיי —
 **Settings → Pages → Source: `GitHub Actions`.**
 
 זה הצעד הידני היחיד בהקמה, ואין דרך לעקוף אותו: יצירת אתר Pages דורשת
@@ -77,16 +83,38 @@ https://<הדומיין-שלכם>/join/?c=d2i        ← D2I
 **כיול ידני** — פותחים את הקבוצה בוואטסאפ, מסתכלים במספר, מזינים.
 הכלי מסמן את התאריך ומזכיר לכם לכייל מחדש אחרי מספר הימים שהגדרתם.
 
-**מונה (אופציונלי)** — סופר לחיצות על הקישור הנצחי ומקדם את המספר המשוער
-בין כיול לכיול, כך שהמספר לא מתיישן. מספר משוער מסומן ב־`~`.
+**מונה (אופציונלי)** — כל פעם שהקישור הנצחי מנתב מישהו לקבוצה, נרשם "hit" לאותה
+קבוצה ספציפית, וזה מקדם את המספר המשוער בין כיול לכיול, כך שהמספר לא מתיישן.
+מספר משוער מסומן ב־`~`. זו הערכה, לא ספירה מדויקת — לוואטסאפ אין API שמדווח מי
+באמת השלים הצטרפות, רק מי נכנס לקישור.
 
-התקנת המונה (חינם, חמש דקות):
+### מונה על נטליפיי (ברירת המחדל של הריפו הזה)
+
+האתר הזה מוגדר לרוץ על **Netlify**, וכבר כולל הכול בשביל זה: פונקציית שרת אחת
+(`netlify/functions/counter.js`) ששומרת את המספרים ב־Netlify Blobs — אחסון
+שמובנה בנטליפיי בלי שום הקמה, בלי חשבון חיצוני ובלי מפתחות API.
+
+**זה כבר מוכן — אין כלום להקים.** מרגע שהריפו מחובר לאתר בנטליפיי:
+1. נטליפיי מתקינה את `@netlify/blobs` לבד (מוגדר ב־`package.json`) ובונה את
+   הפונקציה לבד (מוגדר ב־`netlify.toml`).
+2. שדה "כתובת המונה" בלשונית ניהול כבר מצביע על `/api/counter`.
+3. זהו. כל הפניה דרך `/join/?c=…` סופרת את עצמה אוטומטית.
+
+אם רוצים לוודא שזה עובד: פתחו `https://<האתר-שלכם>/api/counter?action=all`
+בדפדפן — אמור לחזור JSON כמו `{"counts":{}}` (או עם מספרים, אם כבר היו הפניות).
+
+### מונה על אחסון אחר (Google Apps Script)
+
+אם האתר לא רץ על נטליפיי (למשל GitHub Pages בלי שכבת שרת), אפשר להשתמש
+ב־`tools/counter.gs` במקום — מונה חלופי מבוסס Google Apps Script, עם אותו
+פרוטוקול בדיוק (`?action=hit&node=…` / `?action=all`), כך שאין שום שינוי קוד:
 1. פתחו [script.google.com](https://script.google.com) → New project.
 2. הדביקו את התוכן של `tools/counter.gs`.
 3. Deploy → New deployment → **Web app**, Execute as *Me*, Who has access *Anyone*.
-4. העתיקו את כתובת ה־`/exec` ושימו אותה בשדה "כתובת המונה" בלשונית ניהול.
+4. העתיקו את כתובת ה־`/exec` ושימו אותה בשדה "כתובת המונה" בלשונית ניהול
+   (במקום `/api/counter`).
 
-בלי המונה הכול עובד — פשוט על המספרים הידניים.
+בלי אף מונה הכול עובד — פשוט על המספרים הידניים.
 
 ---
 
@@ -114,20 +142,23 @@ https://<הדומיין-שלכם>/join/?c=d2i        ← D2I
 ## מבנה הקבצים
 
 ```
-index.html          מרכז הבקרה
-join/index.html     הקישור הנצחי (הנתב)
-assets/core.js      טעינת נתונים + כל חוקי הניתוב והמצב
-assets/app.js       לוגיקת מרכז הבקרה
-assets/style.css    עיצוב (RTL, מצב בהיר וכהה)
-data/groups.json    מקור האמת היחיד
-tools/counter.gs    המונה האופציונלי (Google Apps Script)
+index.html                    מרכז הבקרה
+join/index.html               הקישור הנצחי (הנתב)
+assets/core.js                טעינת נתונים + כל חוקי הניתוב והמצב
+assets/app.js                 לוגיקת מרכז הבקרה
+assets/style.css              עיצוב (RTL, מצב בהיר וכהה)
+data/groups.json              מקור האמת היחיד
+netlify.toml                  הגדרות נטליפיי (functions + redirect ל־/api/counter)
+netlify/functions/counter.js  המונה על נטליפיי (Netlify Blobs, בלי הקמה)
+package.json                  תלות יחידה: @netlify/blobs, לבניית הפונקציה
+tools/counter.gs              מונה חלופי לאחסון שאינו נטליפיי (Google Apps Script)
 ```
 
 ### `data/groups.json`
 
 ```jsonc
 {
-  "config":  { "warnAtPercent": 85, "staleAfterDays": 14, "counterEndpoint": "", "repo": {…} },
+  "config":  { "warnAtPercent": 85, "staleAfterDays": 14, "counterEndpoint": "/api/counter", "repo": {…} },
   "brands":  [ { "id": "drones", "name": "רחפניסטים להייטק" } ],
   "funnels": [ { "id": "drones", "order": ["drones-1", "drones-2"], "fallbackNodeId": "drones-channel",
                  "routingMode": "sequential" } ],  // "sequential" | "balanced"

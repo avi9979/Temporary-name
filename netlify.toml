@@ -1,0 +1,12 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# כתובת נוחה וקבועה למונה, כדי שלא יהיה תלוי בשם ה־function.
+[[redirects]]
+  from = "/api/counter"
+  to = "/.netlify/functions/counter"
+  status = 200

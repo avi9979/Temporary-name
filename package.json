@@ -1,0 +1,8 @@
+{
+  "name": "community-control-center",
+  "private": true,
+  "description": "אתר סטטי + פונקציית מונה אחת לנטליפיי. אין build step לאתר עצמו.",
+  "dependencies": {
+    "@netlify/blobs": "^11.0.0"
+  }
+}
