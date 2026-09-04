@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מרכז הבקרה של הקהילות</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ctext y=%2726%27 font-size=%2726%27%3E%F0%9F%9B%B0%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div>
+      <h1 id="site-title">מרכז הבקרה של הקהילות</h1>
+      <div class="sub" id="site-sub">טוען…</div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="overview"  aria-selected="true">סקירה</button>
+      <button role="tab" data-tab="tasks"     aria-selected="false">משימות <span id="task-count"></span></button>
+      <button role="tab" data-tab="broadcast" aria-selected="false">הודעה לכולם</button>
+      <button role="tab" data-tab="manage"    aria-selected="false">ניהול</button>
+    </nav>
+  </header>
+
+  <div id="load-error" class="card" hidden></div>
+
+  <!-- ================= סקירה ================= -->
+  <section id="tab-overview" class="tab-panel">
+    <div class="stat-row" id="stats"></div>
+
+    <div class="card">
+      <h2>הקישורים הנצחיים</h2>
+      <p class="hint">פרסמו את הכתובות האלה פעם אחת. הן מנתבות תמיד לקבוצה שיש בה מקום — גם בעוד שנה.</p>
+      <div id="permalinks"></div>
+    </div>
+
+    <div class="card">
+      <h2>כל הקבוצות, הקהילות והערוצים</h2>
+      <p class="hint">שני המותגים, כל הפלטפורמות, מסך אחד.</p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>שם</th><th>מותג</th><th>סוג</th>
+              <th>חברים</th><th>תפוסה</th><th>מקום שנשאר</th>
+              <th>עודכן</th><th>מצב</th>
+            </tr>
+          </thead>
+          <tbody id="nodes-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= משימות ================= -->
+  <section id="tab-tasks" class="tab-panel" hidden>
+    <div class="card">
+      <h2>מה לעשות עכשיו</h2>
+      <p class="hint">רשימה, לא דוח. כל שורה היא פעולה אחת עם כפתור.</p>
+      <div id="tasks"></div>
+    </div>
+  </section>
+
+  <!-- ================= הודעה לכולם ================= -->
+  <section id="tab-broadcast" class="tab-panel" hidden>
+    <div class="card">
+      <h2>לנסח פעם אחת, לשלוח לכולם</h2>
+      <p class="hint">
+        הכלי לא שולח בשמכם — הוא מעתיק לכם את הנוסח ופותח את הקבוצה, ואתם מדביקים ושולחים.
+        ככה אנחנו נשארים בתוך הכללים של וואטסאפ ולא מסכנים את הקהילות.
+      </p>
+      <div class="field">
+        <label for="bc-title">שם ההודעה (לעצמכם)</label>
+        <input id="bc-title" placeholder="למשל: מפגש אוקטובר">
+      </div>
+      <div class="field">
+        <label for="bc-text">הנוסח</label>
+        <textarea id="bc-text" placeholder="כתבו כאן פעם אחת…"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="bc-save" class="primary">שמור כקמפיין</button>
+        <button id="bc-clear" class="ghost">נקה</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>למי כבר שלחתם</h2>
+      <p class="hint">סימון ידני — כדי שלא תשכחו מי נשאר.</p>
+      <div id="bc-targets"></div>
+    </div>
+
+    <div class="card" id="bc-history-card" hidden>
+      <h2>קמפיינים קודמים</h2>
+      <div id="bc-history"></div>
+    </div>
+  </section>
+
+  <!-- ================= ניהול ================= -->
+  <section id="tab-manage" class="tab-panel" hidden>
+    <div class="card">
+      <h2>שמירה</h2>
+      <p class="hint">
+        אין בסיס נתונים. כל הנתונים יושבים בקובץ אחד בגיטהאב, והשמירה כותבת אליו ישירות.
+      </p>
+      <div id="save-state" class="pill">אין שינויים</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button id="save-github" class="primary">שמור לגיטהאב</button>
+        <button id="save-download">הורד קובץ</button>
+        <button id="reload" class="ghost">טען מחדש</button>
+      </div>
+      <div class="field" style="margin-top:16px;max-width:520px">
+        <label for="gh-token">
+          טוקן גיטהאב (fine-grained, הרשאת Contents: Read and write על הריפו הזה בלבד)
+        </label>
+        <input id="gh-token" type="password" placeholder="github_pat_…" autocomplete="off">
+        <div class="hint" style="margin-top:6px">
+          נשמר רק בדפדפן שלכם (localStorage) ולא נשלח לשום מקום מלבד api.github.com.
+          אל תזינו אותו במחשב משותף.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>קבוצות, קהילות וערוצים</h2>
+      <p class="hint">כאן מעדכנים מספרי חברים (כיול), מחליפים קישורים ופותחים קבוצה חדשה.</p>
+      <div id="manage-nodes"></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button id="add-node" class="primary">הוסף קבוצה / ערוץ</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>משפכים (סדר הכניסה)</h2>
+      <p class="hint">כל משפך הוא קישור נצחי אחד. הסדר קובע לאן נכנסים קודם.</p>
+      <div id="manage-funnels"></div>
+    </div>
+
+    <div class="card">
+      <h2>הגדרות</h2>
+      <div class="grid-2">
+        <div class="field">
+          <label for="cfg-warn">אזהרה כשקבוצה מגיעה ל־ (%)</label>
+          <input id="cfg-warn" type="number" min="50" max="100">
+        </div>
+        <div class="field">
+          <label for="cfg-stale">להזכיר לכייל אחרי (ימים)</label>
+          <input id="cfg-stale" type="number" min="1" max="120">
+        </div>
+        <div class="field">
+          <label for="cfg-counter">כתובת המונה (אופציונלי)</label>
+          <input id="cfg-counter" placeholder="ריק = מספרים ידניים בלבד">
+        </div>
+        <div class="field">
+          <label for="cfg-branch">ענף הגיטהאב לשמירה</label>
+          <input id="cfg-branch">
+        </div>
+      </div>
+      <p class="hint" style="margin:0">
+        המונה סופר לחיצות על הקישור הנצחי ומקדם את מספר החברים המשוער בין כיול לכיול.
+        בלעדיו הכול עובד — פשוט על המספרים שאתם מזינים. הוראות ההקמה ב־README.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script type="module" src="assets/app.js"></script>
+</body>
+</html>

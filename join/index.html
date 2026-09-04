@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>הצטרפות לקהילה</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ctext y=%2726%27 font-size=%2726%27%3E%F0%9F%9B%B0%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<main class="join-page">
+  <div class="join-card">
+    <div id="spinner" class="spinner"></div>
+    <h1 id="title">רגע, מחברים אותך…</h1>
+    <p id="msg">בודקים באיזו קבוצה יש מקום.</p>
+    <a id="manual" class="btn primary" hidden>כניסה לקבוצה</a>
+    <a id="alt" class="btn" hidden></a>
+  </div>
+</main>
+
+<script type="module">
+import { loadData, loadClicks, byId, pickTarget } from "../assets/core.js";
+
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+
+function show(title, msg, { href, label, altHref, altLabel } = {}) {
+  $("spinner").hidden = true;
+  $("title").textContent = title;
+  $("msg").textContent = msg;
+  if (href) {
+    const a = $("manual");
+    a.href = href; a.textContent = label; a.hidden = false;
+  }
+  if (altHref) {
+    const a = $("alt");
+    a.href = altHref; a.textContent = altLabel; a.hidden = false;
+  }
+}
+
+/* דיווח ללא חסימה: הניתוב לא מחכה למונה ולא נשבר אם הוא נופל. */
+function countJoin(endpoint, nodeId) {
+  if (!endpoint) return;
+  try {
+    const url = `${endpoint}${endpoint.includes("?") ? "&" : "?"}action=hit&node=${encodeURIComponent(nodeId)}`;
+    if (navigator.sendBeacon) navigator.sendBeacon(url);
+    else fetch(url, { method: "GET", mode: "no-cors", keepalive: true }).catch(() => {});
+  } catch { /* המונה לעולם לא מפיל את הניתוב */ }
+}
+
+try {
+  const data = await loadData("../");
+  const funnelId = params.get("c") || params.get("g") || data.config.defaultFunnel;
+  const funnel = byId(data.funnels, funnelId) || data.funnels[0];
+
+  if (!funnel) {
+    show("הקישור לא מחובר עדיין", "הקהילה עדיין לא הוגדרה בכלי. נסו שוב עוד מעט.");
+  } else {
+    const clicks = await loadClicks(data.config);
+    const { node, reason } = pickTarget(funnel, data, clicks);
+
+    if (!node) {
+      show(
+        "כל הקבוצות מלאות כרגע",
+        `${funnel.name} — אנחנו פותחים קבוצה נוספת. נסו שוב בקרוב.`
+      );
+    } else {
+      countJoin(data.config.counterEndpoint, node.id);
+      document.title = funnel.name;
+      show(
+        "מעבירים אותך…",
+        reason === "fallback"
+          ? "הקבוצות מלאות, אז אנחנו מחברים אותך לערוץ העדכונים."
+          : `מצטרפים אל ${node.name}.`,
+        { href: node.inviteUrl, label: "לא הועברת? לחצו כאן" }
+      );
+      /* השהיה קצרה כדי שהביקון ייצא לפני שהדף מוחלף. */
+      setTimeout(() => location.replace(node.inviteUrl), 350);
+    }
+  }
+} catch (err) {
+  console.error(err);
+  show("משהו השתבש", "לא הצלחנו לטעון את פרטי הקהילה. רעננו את הדף בבקשה.");
+}
+</script>
+</body>
+</html>

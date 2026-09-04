@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-04",
+  "config": {
+    "siteName": "מרכז הבקרה של הקהילות",
+    "defaultFunnel": "drones",
+    "warnAtPercent": 85,
+    "staleAfterDays": 14,
+    "counterEndpoint": "",
+    "repo": {
+      "owner": "avi9979",
+      "name": "Temporary-name",
+      "branch": "main",
+      "path": "data/groups.json"
+    }
+  },
+  "brands": [
+    {
+      "id": "drones",
+      "name": "רחפניסטים להייטק",
+      "color": "#2563eb"
+    },
+    {
+      "id": "d2i",
+      "name": "D2I",
+      "color": "#7c3aed"
+    }
+  ],
+  "funnels": [
+    {
+      "id": "drones",
+      "brandId": "drones",
+      "name": "קבוצות רחפניסטים להייטק",
+      "tagline": "מחברים אנשים מעולם הרחפנים להייטק.",
+      "order": [
+        "drones-1",
+        "drones-2"
+      ],
+      "fallbackNodeId": "drones-channel"
+    },
+    {
+      "id": "d2i",
+      "brandId": "d2i",
+      "name": "קבוצות D2I",
+      "tagline": "הקהילה של D2I.",
+      "order": [
+        "d2i-1"
+      ],
+      "fallbackNodeId": ""
+    }
+  ],
+  "nodes": [
+    {
+      "id": "drones-1",
+      "brandId": "drones",
+      "platform": "whatsapp_group",
+      "name": "רחפניסטים להייטק #1",
+      "inviteUrl": "",
+      "capacity": 1024,
+      "members": 0,
+      "calibratedAt": "",
+      "clicksAtCalibration": 0,
+      "acceptingJoins": true,
+      "notes": "החליפו את הקישור בקישור ההזמנה האמיתי של הקבוצה."
+    },
+    {
+      "id": "drones-2",
+      "brandId": "drones",
+      "platform": "whatsapp_group",
+      "name": "רחפניסטים להייטק #2",
+      "inviteUrl": "",
+      "capacity": 1024,
+      "members": 0,
+      "calibratedAt": "",
+      "clicksAtCalibration": 0,
+      "acceptingJoins": true,
+      "notes": ""
+    },
+    {
+      "id": "drones-channel",
+      "brandId": "drones",
+      "platform": "whatsapp_channel",
+      "name": "ערוץ רחפניסטים להייטק",
+      "inviteUrl": "",
+      "capacity": 0,
+      "members": 0,
+      "calibratedAt": "",
+      "clicksAtCalibration": 0,
+      "acceptingJoins": true,
+      "notes": "ערוץ = בלי הגבלת חברים. משמש כרשת ביטחון כשכל הקבוצות מלאות."
+    },
+    {
+      "id": "d2i-1",
+      "brandId": "d2i",
+      "platform": "whatsapp_group",
+      "name": "D2I #1",
+      "inviteUrl": "",
+      "capacity": 1024,
+      "members": 0,
+      "calibratedAt": "",
+      "clicksAtCalibration": 0,
+      "acceptingJoins": true,
+      "notes": ""
+    }
+  ],
+  "history": [],
+  "broadcasts": []
+}
